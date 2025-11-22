@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>22岁生日快乐 | 陈祎文专属惊喜</title>
+    <meta name="theme-color" content="#ff8fa3"/>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Zcool+KuaiLe&family=Noto+Sans+SC:wght@400;700;900&display=swap" rel="stylesheet">
+    <script defer src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {
+            --primary: #ff8fa3; --primary-dark: #e05f78; --accent: #a29bfe;
+            --bg-gradient: linear-gradient(135deg, #fff0f5 0%, #fff 50%, #ffe4e9 100%);
+            --glass: rgba(255, 255, 255, 0.85); --shadow: 0 8px 32px 0 rgba(255, 105, 180, 0.15);
+            --border: 1px solid rgba(255, 255, 255, 0.8);
+            --ease: cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; outline: none; }
+        body {
+            margin: 0; padding: 0; font-family: "Noto Sans SC", sans-serif;
+            background: var(--bg-gradient); min-height: 100dvh; color: #444; overflow-x: hidden;
+        }
+        /* 音乐按钮 */
+        .music-btn {
+            position: fixed; top: 20px; right: 20px; z-index: 1000;
+            width: 40px; height: 40px; border-radius: 50%;
+            background: rgba(255,255,255,0.9); border: 2px solid var(--primary);
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); cursor: pointer;
+            font-size: 20px; animation: popIn 0.5s;
+        }
+        .music-btn.playing { animation: spin 4s linear infinite; border-color: #4cd964; }
+        
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; min-height: 100dvh; display: flex; flex-direction: column; }
+        header { text-align: center; padding: 30px 0 20px; animation: fadeInDown 0.8s var(--ease); }
+        h1 { 
+            margin: 10px 0; font-size: 36px; font-weight: 900; font-family: "Zcool KuaiLe", cursive;
+            background: linear-gradient(45deg, var(--primary-dark), var(--accent)); -webkit-background-clip: text; color: transparent;
+        }
+        .badge { background: #fff; padding: 6px 16px; border-radius: 50px; color: var(--primary-dark); font-weight: bold; font-size: 12px; box-shadow: 0 4px 15px rgba(255, 106, 162, 0.2); }
+        
+        .card { background: var(--glass); backdrop-filter: blur(12px); border-radius: 24px; padding: 25px; box-shadow: var(--shadow); border: var(--border); margin-bottom: 20px; }
+        .btn { background: linear-gradient(90deg, var(--primary), var(--primary-dark)); color: #fff; border: none; padding: 14px 28px; border-radius: 18px; font-size: 16px; font-weight: bold; width: 100%; box-shadow: 0 8px 20px rgba(255, 106, 162, 0.3); transition: transform 0.1s; }
+        .btn:active { transform: scale(0.96); }
+        .btn:disabled { background: #ccc; box-shadow: none; filter: grayscale(1); }
+        
+        .progress { display: flex; justify-content: center; gap: 10px; margin-bottom: 25px; }
+        .dot { width: 10px; height: 10px; background: rgba(0,0,0,0.1); border-radius: 50%; transition: 0.4s; }
+        .dot.active { width: 30px; background: var(--primary); border-radius: 10px; }
+        .dot.done { background: #4cd964; }
+        
+        /* Game Styles */
+        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 25px 0; }
+        .option-btn { padding: 16px; border: 2px solid transparent; border-radius: 16px; background: #fff; font-size: 16px; color: #666; box-shadow: 0 4px 10px rgba(0,0,0,0.03); }
+        .option-btn.selected { border-color: var(--primary); background: #fff5f8; color: var(--primary); font-weight: bold; }
+        .option-btn.correct { border-color: #4cd964; background: #f0fff4; color: #4cd964; }
+        .option-btn.incorrect { border-color: #ff3b30; background: #fff0f0; color: #ff3b30; }
+        
+        .memory-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 15px; perspective: 1000px; }
+        .mem-card { aspect-ratio: 1; position: relative; transform-style: preserve-3d; transition: transform 0.6s; }
+        .mem-card.flipped { transform: rotateY(180deg); }
+        .mem-face { position: absolute; inset: 0; backface-visibility: hidden; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
+        .mem-front { background: #fff; transform: rotateY(180deg); border: 2px solid var(--primary); overflow: hidden;}
+        .mem-front img { width: 100%; height: 100%; object-fit: cover; }
+        .mem-back { background: linear-gradient(135deg, #ff9ec4, var(--primary)); color: white; font-weight: bold; }
+        .mem-back::after { content: "?"; }
+        
+        .scene-stage { height: 260px; background: #f8f9fa; border-radius: 16px; position: relative; overflow: hidden; border: 4px solid #fff; margin: 15px 0; }
+        .clue-item { position: absolute; font-size: 32px; padding: 10px; z-index: 10; transition: 0.2s; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.1)); }
+        .clue-item.found { animation: popOut 0.5s forwards; pointer-events: none; }
+        .desk { position: absolute; bottom: 0; width: 100%; height: 90px; background: #eed0a8; border-top: 6px solid #dcc096; }
+        .window { position: absolute; top: 30px; left: 30px; width: 80px; height: 80px; background: #dff9fb; border: 6px solid #fff; border-radius: 12px; }
+        
+        .scratch-wrapper { position: relative; width: 280px; height: 140px; margin: 20px auto; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .scratch-layer { position: absolute; inset: 0; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1; }
+        canvas.scratch-cvs { position: absolute; top: 0; left: 0; z-index: 2; width: 100%; height: 100%; }
+        
+        .cake-container { height: 200px; display: flex; align-items: flex-end; justify-content: center; position: relative; margin-bottom: 20px; }
+        .cake { width: 180px; height: 80px; background: #f4a460; border-radius: 12px 12px 0 0; position: relative; }
+        .icing { position: absolute; top: -12px; left: -4px; right: -4px; height: 24px; background: #fff5f8; border-radius: 12px; z-index: 2; }
+        .candle { position: absolute; bottom: 80px; width: 10px; height: 40px; background: linear-gradient(to bottom, #ff9ec4, #ff6aa2); border-radius: 3px; z-index: 1; }
+        .flame { width: 14px; height: 20px; background: orange; border-radius: 50% 50% 20% 20%; position: absolute; top: -18px; left: -2px; animation: flicker 0.6s infinite alternate; }
+        .candle.out .flame { display: none; }
+
+        .fade-enter { animation: fadeIn 0.5s ease-out forwards; }
+        .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes fadeInDown { from { opacity:0; transform:translateY(-20px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes popOut { 0% { transform:scale(1); opacity:1; } 50% { transform:scale(1.4); opacity:0.8; } 100% { transform:scale(0); opacity:0; } }
+        @keyframes flicker { to { transform: scale(1.1) rotate(2deg); opacity: 0.8; } }
+        @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
+    </style>
+</head>
+<body>
+
+<audio id="bgm" loop preload="auto" crossorigin="anonymous">
+    <source src="https://raw.githubusercontent.com/xi-music/music-cdn/master/bgm.mp3" type="audio/mpeg">
+</audio>
+
+<div class="music-btn" id="music-toggle">🎵</div>
+
+<div class="container">
+    <header>
+        <div class="badge">✨ 22nd Birthday Edition</div>
+        <h1>陈祎文的<br>生日大冒险</h1>
+    </header>
+    <div id="app"></div>
+</div>
+
+<script>
+    const CONFIG = {
+        name: "陈祎文",
+        correctMonth: "九月",
+        devName: "徐一超"
+    };
+
+    const $ = s => document.querySelector(s);
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+
+    const confettiEffect = {
+        pop: () => window.confetti({ origin: { y: 0.7 }, colors: ['#ff8fa3', '#ffeb3b', '#a29bfe'] }),
+        win: () => {
+            const end = Date.now() + 3000;
+            (function frame() {
+                window.confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 } });
+                window.confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 } });
+                if (Date.now() < end) requestAnimationFrame(frame);
+            }());
+        }
+    };
+
+    // --- 强力音乐管理器 ---
+    const MusicMgr = {
+        audio: $('#bgm'),
+        btn: $('#music-toggle'),
+        isPlaying: false,
+        init() {
+            this.audio.volume = 0.6;
+
+            // 1. 按钮点击切换
+            this.btn.onclick = () => this.toggle();
+
+            // 2. 监听播放失败（通常是链接挂了）
+            this.audio.addEventListener('error', () => {
+                console.warn("音乐加载失败，可能是链接失效");
+                this.btn.style.background = "#ffccc7";
+                this.btn.innerHTML = "✕";
+                // 只有开发者看得到，避免破坏气氛，但如果你自己调试，看到红叉就是链接坏了
+            });
+
+            // 3. 监听实际播放状态
+            this.audio.addEventListener('play', () => {
+                this.isPlaying = true;
+                this.btn.classList.add('playing');
+            });
+            this.audio.addEventListener('pause', () => {
+                this.isPlaying = false;
+                this.btn.classList.remove('playing');
+            });
+
+            // 4. 微信/iOS 自动播放补丁：监听任意触摸
+            const unlock = () => {
+                if(!this.isPlaying) {
+                    this.play().catch(e => {});
+                    // 尝试播放
+                }
+                // 只要用户动了，就移除监听，免得一直触发
+                ['touchstart', 'click', 'mousemove'].forEach(evt => document.removeEventListener(evt, unlock) );
+            };
+            ['touchstart', 'click', 'mousemove'].forEach(evt => document.addEventListener(evt, unlock, {once:true}) );
+        },
+        play() {
+            return this.audio.play();
+        },
+        toggle() {
+            if (this.isPlaying) this.audio.pause();
+            else this.play().catch(e => alert("音乐播放被拦截或链接失效，请检查控制台"));
+        }
+    };
+    MusicMgr.init();
+
+    // --- 游戏引擎 (保持不变，只在关键点调用音乐) ---
+    class GameEngine {
+        constructor(levels) {
+            this.levels = levels;
+            this.current = 0;
+            this.app = $('#app');
+        }
+
+        init() {
+            this.renderIdentityCheck();
+        }
+
+        renderIdentityCheck() {
+            const options = ['九月', '八月', '十月', '七月'].sort(() => Math.random() - 0.5);
+            this.app.innerHTML = `
+                <div class="card fade-enter">
+                    <div style="font-size:48px;margin-bottom:10px;text-align:center">🔐</div>
+                    <h2 style="text-align:center;margin:0 0 10px">身份验证</h2>
+                    <p style="text-align:center;color:#888;font-size:14px">回答安全问题以解锁惊喜</p>
+                    <div style="font-weight:bold;margin:20px 0 10px">你与开发者${CONFIG.devName}是在哪个月份认识的？</div>
+                    <div class="options-grid">
+                        ${options.map(opt => `<button class="option-btn" data-val="${opt}">${opt}</button>`).join('')}
+                    </div>
+                    <button class="btn" id="verify-btn" disabled>验证并进入</button>
+                    <div id="err-msg" style="text-align:center;color:#ff3b30;height:20px;margin-top:10px;font-size:12px"></div>
+                </div>
+            `;
+
+            const btns = document.querySelectorAll('.option-btn');
+            const vBtn = $('#verify-btn');
+
+            btns.forEach(b => b.onclick = () => {
+                btns.forEach(btn => btn.classList.remove('selected'));
+                b.classList.add('selected');
+                vBtn.disabled = false;
+            });
+
+            vBtn.onclick = async () => {
+                const sel = $('.option-btn.selected');
+                if (!sel) return;
+                if (sel.dataset.val === CONFIG.correctMonth) {
+                    MusicMgr.play(); // 尝试播放
+                    sel.classList.add('correct');
+                    vBtn.innerText = "验证成功 ✓";
+                    await wait(800);
+                    this.renderIntro();
+                } else {
+                    sel.classList.add('incorrect');
+                    $('.card').classList.add('shake');
+                    $('#err-msg').innerText = "不对哦，是秋天开始的那个月~";
+                    setTimeout(() => {
+                        $('.card').classList.remove('shake');
+                        sel.classList.remove('incorrect', 'selected');
+                        vBtn.disabled = true;
+                    }, 1000);
+                }
+            };
+        }
+
+        renderIntro() {
+            this.app.innerHTML = `
+                <div class="card fade-enter" style="text-align:center">
+                    <div style="font-size:50px;margin-bottom:15px">🎮</div>
+                    <h2>准备好了吗？</h2>
+                    <p style="color:#666;line-height:1.6;margin-bottom:25px">前方有 4 个小挑战<br>通关后可兑换<strong style="color:var(--primary-dark)">生日心愿</strong>！</p>
+                    <button class="btn" onclick="game.next()">开始大冒险</button>
+                </div>
+            `;
+        }
+
+        async next() {
+            if (this.current >= this.levels.length) return;
+
+            const dots = this.levels.map((_,i) => `<div class="dot ${i===this.current?'active':(i<this.current?'done':'')}"></div>`).join('');
+            if(this.app.innerHTML) {
+                this.app.style.opacity = 0;
+                this.app.style.transition = "opacity 0.3s";
+                await wait(300);
+            }
+            this.app.innerHTML = `
+                <div class="progress fade-enter">${dots}</div>
+                <div id="lvl-stage" class="card fade-enter" style="min-height:300px"></div>
+            `;
+            this.app.style.opacity = 1;
+
+            const stage = $('#lvl-stage');
+            const passed = await this.levels[this.current](stage, this.current + 1);
+            if (passed) {
+                this.current++;
+                this.next();
+            }
+        }
+    }
+
+    // --- 关卡函数 ---
+    function levelMemory(root, index) {
+        return new Promise(resolve => {
+            // ★ 替换图片位置 ★
+            const icons = ['🐶','🐶','🐱','🐱','🐰','🐰','🦊','🦊'].sort(() => Math.random() - 0.5);
+            root.innerHTML = `
+                <h3 style="margin:0 0 15px">#${index} 记忆翻牌</h3>
+                <div class="memory-grid">${icons.map(i => `<div class="mem-card" data-val="${i}"><div class="mem-face mem-front">${i}</div><div class="mem-face mem-back"></div></div>`).join('')}</div>
+            `;
+
+            let flipped = [], match = 0, lock = false;
+            root.querySelectorAll('.mem-card').forEach(c => {
+                c.onclick = () => {
+                    if (lock || c.classList.contains('flipped') || c.classList.contains('matched')) return;
+                    c.classList.add('flipped');
+                    flipped.push(c);
+                    if (flipped.length === 2) {
+                        lock = true;
+                        const [a, b] = flipped;
+                        if (a.dataset.val === b.dataset.val) {
+                            a.classList.add('matched');
+                            b.classList.add('matched');
+                            match++;
+                            confettiEffect.pop();
+                            flipped = [];
+                            lock = false;
+                            if (match === 4) setTimeout(() => showWin(root, resolve), 600);
+                        } else {
+                            setTimeout(() => {
+                                a.classList.remove('flipped');
+                                b.classList.remove('flipped');
+                                flipped=[];
+                                lock=false;
+                            }, 800);
+                        }
+                    }
+                };
+            });
+        });
+    }
+
+    function levelHidden(root, index) {
+        return new Promise(resolve => {
+            const items = [{t:'💄',x:20,y:40}, {t:'🗝️',x:80,y:70}, {t:'📷',x:50,y:60}, {t:'👠',x:15,y:80}, {t:'💌',x:75,y:30}];
+            root.innerHTML = `
+                <div style="display:flex;justify-content:space-between"><h3 style="margin:0">#${index} 寻找线索</h3><span style="font-size:12px;font-weight:bold;color:var(--primary)">已找: <span id="f-cnt">0</span>/5</span></div>
+                <div class="scene-stage"><div class="window"></div><div class="desk"></div>${items.map(i => `<div class="clue-item" style="left:${i.x}%;top:${i.y}%">${i.t}</div>`).join('')}</div>
+            `;
+
+            let cnt = 0;
+            root.querySelectorAll('.clue-item').forEach(el => {
+                el.onclick = function() {
+                    if(this.classList.contains('found'))return;
+                    this.classList.add('found');
+                    $('#f-cnt').innerText = ++cnt;
+                    if(cnt===5)setTimeout(()=>showWin(root, resolve), 500);
+                };
+            });
+        });
+    }
+
+    function levelScratch(root, index, title, prize, sub, isExtra=false) {
+        return new Promise(resolve => {
+            root.innerHTML = `
+                <h3 style="margin:0 0 10px">#${index} ${title}</h3>
+                <p style="font-size:13px;color:#888">刮开涂层，看看藏着什么？</p>
+                <div class="scratch-wrapper">
+                    <div class="scratch-layer"><div style="font-size:32px">🎁</div><div style="font-weight:bold;color:var(--primary-dark);margin:5px 0">${prize}</div><div style="font-size:12px;color:#aaa">${sub}</div></div>
+                    <canvas class="scratch-cvs"></canvas>
+                </div>
+                <button class="btn" id="claim-btn" style="opacity:0;pointer-events:none;transform:translateY(10px)">收入囊中</button>
+            `;
+
+            const cvs = root.querySelector('canvas');
+            const ctx = cvs.getContext('2d');
+            const [w, h] = [280, 140];
+            const dpr = window.devicePixelRatio || 1;
+            cvs.width = w * dpr;
+            cvs.height = h * dpr;
+            ctx.scale(dpr, dpr);
+            cvs.style.width = w+'px';
+            cvs.style.height = h+'px';
+
+            ctx.fillStyle = '#ddd';
+            ctx.fillRect(0,0,w,h);
+            ctx.font = 'bold 20px Arial';
+            ctx.fillStyle='#aaa';
+            ctx.textAlign='center';
+            ctx.fillText('刮一刮', w/2, h/2+8);
+
+            let isDraw = false, finished = false;
+            const getPos = e => {
+                const r = cvs.getBoundingClientRect();
+                const t = e.touches?e.touches[0]:e;
+                return { x: t.clientX-r.left, y: t.clientY-r.top };
+            };
+            const move = e => {
+                if (!isDraw || finished) return;
+                e.preventDefault();
+                const {x,y} = getPos(e);
+                ctx.globalCompositeOperation = 'destination-out';
+                ctx.beginPath();
+                ctx.arc(x,y,15,0,Math.PI*2);
+                ctx.fill();
+                if (Math.random()>0.8) check();
+            };
+            const check = () => {
+                const data = ctx.getImageData(0,0,w*dpr,h*dpr).data;
+                let count = 0;
+                for(let i=3; i<data.length; i+=40) if(data[i]<128) count++;
+                if (count > (data.length/40)*0.4) {
+                    finished = true;
+                    cvs.style.transition='opacity 0.5s';
+                    cvs.style.opacity=0;
+                    const btn = $('#claim-btn');
+                    btn.style.opacity=1;
+                    btn.style.pointerEvents='all';
+                    btn.style.transform='translateY(0)';
+                    confettiEffect.pop();
+                    btn.onclick = () => resolve(true);
+                }
+            };
+
+            cvs.addEventListener('mousedown',()=>isDraw=true);
+            cvs.addEventListener('touchstart',()=>isDraw=true, {passive:false});
+            window.addEventListener('mousemove',move);
+            window.addEventListener('touchmove',move, {passive:false});
+            window.addEventListener('mouseup',()=>isDraw=false);
+            window.addEventListener('touchend',()=>isDraw=false);
+        });
+    }
+
+    function levelCandle(root, index) {
+        return new Promise(resolve => {
+            root.innerHTML = `
+                <h3 style="margin:0 0 10px">#${index} 生日许愿</h3>
+                <div class="cake-container"><div class="cake"><div class="icing"></div>
+                    <div class="candle" style="left:30px;transform:rotate(-5deg)"><div class="flame"></div></div>
+                    <div class="candle" style="left:90px;bottom:85px"><div class="flame"></div></div>
+                    <div class="candle" style="left:150px;transform:rotate(5deg)"><div class="flame"></div></div>
+                </div></div>
+                <div style="text-align:center"><button class="btn" id="mic-btn" style="width:auto;padding:8px 20px;font-size:14px">🎙️ 开启吹气</button></div>
+                <p style="font-size:12px;color:#ccc;text-align:center;margin-top:10px">也可以点击蜡烛吹灭</p>
+            `;
+
+            const candles = root.querySelectorAll('.candle');
+            let out = 0;
+            const blow = c => {
+                if(c.classList.contains('out'))return;
+                c.classList.add('out');
+                out++;
+                confettiEffect.pop();
+                if(out===candles.length)setTimeout(()=>showWin(root, resolve, "愿望已发送 ✨"), 1000);
+            };
+            candles.forEach(c => c.onclick = () => blow(c));
+
+            $('#mic-btn').onclick = async function() {
+                this.disabled = true;
+                this.innerText = "😮 对着屏幕吹气...";
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+                    const ac = new (window.AudioContext||window.webkitAudioContext)();
+                    const src = ac.createMediaStreamSource(stream);
+                    const anal = ac.createAnalyser();
+                    src.connect(anal);
+                    const data = new Uint8Array(anal.frequencyBinCount);
+                    const loop = () => {
+                        if(out===candles.length) {
+                            stream.getTracks().forEach(t=>t.stop());
+                            return;
+                        }
+                        anal.getByteFrequencyData(data);
+                        if (data.reduce((a,b)=>a+b)/data.length > 40) {
+                            const lit = Array.from(candles).filter(c=>!c.classList.contains('out'));
+                            if(lit.length) blow(lit[Math.floor(Math.random()*lit.length)]);
+                        }
+                        requestAnimationFrame(loop);
+                    };
+                    loop();
+                } catch(e) {
+                    this.innerText="麦克风不可用，请手动点击";
+                }
+            };
+        });
+    }
+
+    function levelLoading(root) {
+        return new Promise(resolve => {
+            root.innerHTML = `
+                <div style="text-align:center;padding:40px 0"><div style="font-size:50px;animation:flicker 1s infinite">🚀</div><h3>正在发送祝福...</h3><div class="loading-bar"><div class="loading-fill" id="l-fill"></div></div></div>
+            `;
+            let p = 0;
+            const t = setInterval(() => {
+                p += Math.random()*6;
+                if(p>100) p=100;
+                $('#l-fill').style.width = p+'%';
+                if(p===100) {
+                    clearInterval(t);
+                    setTimeout(()=>resolve(true), 400);
+                }
+            }, 100);
+        });
+    }
+
+    function finalPage(root) {
+        root.innerHTML = `
+            <div style="text-align:center;animation:popIn 0.5s">
+                <h2 style="color:var(--primary-dark)">${CONFIG.name}，生日快乐！</h2>
+                <div style="font-size:80px;margin:20px 0">🎂</div>
+                <div style="background:rgba(255,255,255,0.6);padding:20px;border-radius:12px;text-align:left;line-height:1.6;color:#555;border:1px solid #fff">
+                    <p>恭喜你通关了所有挑战！</p><p>希望22岁的你：<br>✨ 自由且快乐<br>✨ 每一个心愿都能实现</p>
+                    <p style="text-align:right;font-weight:bold;color:var(--primary-dark)">—— ${CONFIG.devName}</p>
+                </div>
+                <button class="btn" style="margin-top:20px" onclick="alert('截图发给${CONFIG.devName}，兑换心愿！')">🎁 点击兑换心愿</button>
+                <button class="btn" style="margin-top:15px;background:transparent;border:1px solid var(--primary);color:var(--primary)" onclick="location.reload()">再玩一次</button>
+            </div>
+        `;
+        confettiEffect.win();
+        setInterval(confettiEffect.pop, 2000);
+    }
+
+    function showWin(root, resolve, txt="下一关") {
+        root.innerHTML = `<div style="text-align:center;padding:40px 0;animation:popIn 0.5s"><div style="font-size:60px">🎉</div><h3>挑战成功!</h3><button class="btn" style="width:auto;margin-top:20px" id="nxt-btn">${txt}</button></div>`;
+        confettiEffect.pop();
+        $('#nxt-btn').onclick = () => resolve(true);
+    }
+
+    const levels = [
+        levelMemory,
+        levelHidden,
+        (r,i) => levelScratch(r,i,"领取礼物","心愿兑换券","截图兑换",false),
+        levelCandle,
+        (r,i) => levelScratch(r,i,"额外惊喜","神秘大礼","逗你的😝",true),
+        levelLoading,
+        finalPage
+    ];
+
+    const game = new GameEngine(levels);
+    game.init();
+</script>
+
+</body>
+</html>
